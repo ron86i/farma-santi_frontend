@@ -1,15 +1,24 @@
-# Usamos una imagen base de Nginx
+# Usamos una imagen base de Nginx (tu base)
 FROM nginx:alpine
 
-# Elimina la configuración por defecto de Nginx y usa la tuya personalizada
+# 1. Copia los archivos precompilados (build) de Vite
+COPY dist /usr/share/nginx/html
+
+# 2. Elimina la config por defecto y usa la tuya
+# (Esto es mejor hacerlo *después* de copiar los archivos, por el caché de Docker)
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia los archivos precompilados (build) de Vite
-COPY dist /usr/share/nginx/html
+# 3. ¡NUEVO! Copia el script de entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
-# Expone el puerto estándar de HTTP
-EXPOSE 4173
+# 4. Expone el puerto 80 (el puerto estándar DENTRO del contenedor)
+#    Tu Nginx en el host (puerto 443) hablará con este puerto 80
+EXPOSE 80
 
-# Comando por defecto para ejecutar Nginx
+# 5. ¡NUEVO! Usa el script como punto de entrada
+ENTRYPOINT ["/entrypoint.sh"]
+
+# 6. Comando por defecto (será ejecutado por el entrypoint)
 CMD ["nginx", "-g", "daemon off;"]

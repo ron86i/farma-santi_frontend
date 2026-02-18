@@ -1,5 +1,6 @@
 import { AlertCircle, Package } from "lucide-react";
 import type { ProductoInfo } from "../../../models";
+import MedicamentoGenerico from "@/assets/MedicamentoGenerico.svg";
 
 interface ProductoCardProps {
   product: ProductoInfo;
@@ -16,12 +17,11 @@ export function ProductoCard({ product, onClick }: ProductoCardProps) {
     >
       <div className="relative h-52 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
         <img
-          src={product.urlFoto}
+          src={product.urlFoto + "?timestamp=" + Date.now().toString()}
           alt={product.nombreComercial}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80";
+            (e.target as HTMLImageElement).src = MedicamentoGenerico;
           }}
         />
         <div

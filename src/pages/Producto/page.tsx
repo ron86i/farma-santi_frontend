@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { X, Pill, Loader2, Frown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Helmet } from "react-helmet-async"; 
+import { X, Pill, Loader2, Frown, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { useQuery } from "../../hooks/generic";
 import { obtenerProductoById } from "../../services/productoService";
 import { Navbar } from "../components/NavBar";
@@ -19,6 +20,7 @@ export function ProductoDetalle() {
     }, [productoId]);
 
     useEffect(() => {
+        // Esta lógica está bien, solo se ejecuta si hay fotos.
         if (dataProducto?.urlFotos.length) {
             setSelectedImage(dataProducto.urlFotos[0]);
         }
@@ -93,6 +95,8 @@ export function ProductoDetalle() {
 
     if (loadingProducto) {
         return (
+            // Nota: Aquí se podría poner un <Helmet> genérico de carga,
+            // pero no es estrictamente necesario, ya que solo es un estado transitorio.
             <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
                 <Navbar searchTerm="" setSearchTerm={() => { }} showSearchTerm={false} />
                 <div className="flex flex-1 items-center justify-center py-32">
@@ -108,6 +112,11 @@ export function ProductoDetalle() {
     if (!dataProducto) {
         return (
             <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
+                <Helmet>
+                    <title>Producto No Encontrado | Farmacia Santi</title>
+                    <meta name="robots" content="noindex" />
+                </Helmet> 
+               
                 <Navbar searchTerm="" setSearchTerm={() => { }} showSearchTerm={false} />
                 <div className="flex flex-1 items-center justify-center py-32">
                     <div className="text-center">
@@ -122,42 +131,107 @@ export function ProductoDetalle() {
 
     const producto: ProductoDetail = dataProducto;
     const stockColor = producto.stock > 10 ? "green" : producto.stock > 0 ? "yellow" : "red";
+    
+    // 🟢 LÓGICA SEO DINÁMICA 🟢
+    
+    // Título: Nombre del Producto | Laboratorio | Farmacia Santi
+    const seoTitle = `${producto.nombreComercial} | ${producto.laboratorio.nombre} | Farmacia Santi`;
+    
+    // Descripción: Usar principios activos y categorías para crear una descripción rica
+    const categoriasStr = producto.categorias.map(c => c.nombre).join(', ');
+    const principiosActivosStr = producto.principiosActivos.map(pa => pa.principioActivo.nombre).join(', ');
+    
+    let seoDescription = `Comprar ${producto.nombreComercial}.`;
+    if (principiosActivosStr) {
+        seoDescription += ` Principios activos: ${principiosActivosStr}.`;
+    }
+    if (categoriasStr) {
+        seoDescription += ` Categoría: ${categoriasStr}.`;
+    }
+    seoDescription += ` Disponible en ${producto.formaFarmaceutica.nombre}.`;
+    
+    // URL Canónica: Debe ser la URL limpia de este producto
+    // Asume que la URL es algo como /producto/ID-o-Slug
+    const canonicalUrl = `https://farmaciasanti.net/producto/${productoId}`; 
+    
+    // Imagen OG: La primera foto del producto para redes sociales
+    const ogImage = producto.urlFotos.length > 0 ? producto.urlFotos[0] : 'https://farmaciasanti.net/default-product-image.jpg';
+
 
     return (
         <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-gray-100">
+            
+            {/* 🟢 IMPLEMENTACIÓN DE REACT HELMET 🟢 */}
+            <Helmet>
+                <title>{seoTitle}</title>
+                <meta name="description" content={seoDescription} />
+                <link rel="canonical" href={canonicalUrl} />
+                
+                {/* Etiquetas Open Graph para compartir en redes sociales */}
+                <meta property="og:title" content={seoTitle} />
+                <meta property="og:description" content={seoDescription} />
+                <meta property="og:type" content="product" />
+                <meta property="og:url" content={canonicalUrl} />
+                <meta property="og:image" content={ogImage} />
+                
+                {/* Opcional: Etiquetas de Twitter Card */}
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content={seoTitle} />
+                <meta name="twitter:description" content={seoDescription} />
+                <meta name="twitter:image" content={ogImage} />
+            </Helmet>
+            {/* ------------------------------------- */}
+            
             <Navbar searchTerm="" setSearchTerm={() => { }} showSearchTerm={false} />
 
             <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col lg:flex-row gap-8 sm:gap-12">
                 {/* Galería de imágenes */}
                 <div className="flex-1 flex flex-col items-center gap-6">
-                    <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-lg">
-                        <img
-                            src={selectedImage}
-                            alt={producto.nombreComercial}
-                            className="w-full h-80 object-contain rounded-lg transition-transform duration-300 hover:scale-105 cursor-zoom-in"
-                            onClick={() => openModal(selectedImage)}
-                        />
-                    </div>
-
-                    {producto.urlFotos.length > 1 && (
-                        <div className="bg-white rounded-2xl shadow-lg p-4 w-full max-w-lg">
-                            <h3 className="text-sm font-semibold text-gray-600 mb-3 text-center">Imágenes del producto</h3>
-                            <div className="flex gap-3 overflow-x-auto pb-2">
-                                {producto.urlFotos.map((img, idx) => (
-                                    <img
-                                        key={idx}
-                                        src={img}
-                                        alt={`Foto ${idx + 1}`}
-                                        className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg cursor-pointer transition-all duration-200 flex-shrink-0 ${selectedImage === img
-                                            ? "ring-4 ring-blue-500 ring-opacity-60 scale-105"
-                                            : "ring-2 ring-gray-200 hover:ring-blue-300"
-                                            }`}
-                                        onClick={() => setSelectedImage(img)}
-                                    />
-                                ))}
+                    {producto.urlFotos.length > 0 ? (
+                        // ... (Resto de tu galería de imágenes)
+                        <>
+                            <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-lg">
+                                <img
+                                    src={selectedImage}
+                                    alt={producto.nombreComercial}
+                                    className="w-full h-80 object-contain rounded-lg transition-transform duration-300 hover:scale-105 cursor-zoom-in"
+                                    onClick={() => openModal(selectedImage)}
+                                />
                             </div>
-                        </div>
+
+                            {producto.urlFotos.length > 1 && (
+                                <div className="bg-white rounded-2xl shadow-lg p-4 w-full max-w-lg">
+                                    <h3 className="text-sm font-semibold text-gray-600 mb-3 text-center">Imágenes del producto</h3>
+                                    <div className="flex gap-3 overflow-x-auto pb-2">
+                                        {producto.urlFotos.map((img, idx) => (
+                                            <img
+                                                key={idx}
+                                                src={img+"?timestamp="+Date.now()}
+                                                alt={`Foto ${idx + 1}`}
+                                                className={`w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg cursor-pointer transition-all duration-200 flex-shrink-0 ${selectedImage === img
+                                                    ? "ring-4 ring-blue-500 ring-opacity-60 scale-105"
+                                                    : "ring-2 ring-gray-200 hover:ring-blue-300"
+                                                    }`}
+                                                onClick={() => setSelectedImage(img)}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        // ... (Contenido para sin imágenes)
+                        <>
+                            <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-lg">
+                                <div className="w-full h-80 flex flex-col items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                                    <ImageOff className="w-16 h-16 text-gray-400 mb-3" />
+                                    <span className="text-gray-500 font-medium">Sin imágenes</span>
+                                    <span className="text-sm text-gray-400 mt-1">Este producto no tiene fotos disponibles.</span>
+                                </div>
+                            </div>
+                        </>
                     )}
+
                 </div>
 
                 {/* Información de venta */}
@@ -318,8 +392,8 @@ export function ProductoDetalle() {
                                             key={idx}
                                             onClick={(e) => handleThumbnailClick(e, idx)}
                                             className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all duration-200 border-2 ${currentModalIndex === idx
-                                                    ? "border-white scale-110 shadow-lg"
-                                                    : "border-gray-400 opacity-70 hover:opacity-100 hover:scale-105"
+                                                ? "border-white scale-110 shadow-lg"
+                                                : "border-gray-400 opacity-70 hover:opacity-100 hover:scale-105"
                                                 }`}
                                         >
                                             <img
@@ -332,8 +406,6 @@ export function ProductoDetalle() {
                                 </div>
                             </div>
                         )}
-
-
                     </div>
                 </div>
             )}
